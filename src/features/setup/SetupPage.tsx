@@ -1,11 +1,16 @@
-import { EmptyState } from '../../components/EmptyState'
+import { useNavigate } from 'react-router-dom'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../../db/schema'
+import { SetupWizard } from './SetupWizard'
 
 export function SetupPage() {
-  return (
-    <EmptyState
-      icon="🛠️"
-      title="Semester setup"
-      description="The setup wizard (subjects, faculty, weekly timetable, holidays) is coming in the next build phase."
-    />
-  )
+  const navigate = useNavigate()
+  const hasAnySemester = useLiveQuery(async () => (await db.semesters.count()) > 0, [])
+
+  const handleCancel = () => {
+    if (hasAnySemester) navigate(-1)
+    else navigate('/')
+  }
+
+  return <SetupWizard onCancel={handleCancel} />
 }
