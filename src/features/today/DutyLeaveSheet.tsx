@@ -9,7 +9,7 @@ const REASONS: DutyLeaveReason[] = ['NSS', 'IEDC', 'Hackathon', 'Sports', 'Place
 export function DutyLeaveSheet({
   semesterId,
   date,
-  periodIndex,
+  periodIndexes,
   subjectId,
   subjectName,
   existing,
@@ -17,7 +17,7 @@ export function DutyLeaveSheet({
 }: {
   semesterId: string
   date: string
-  periodIndex: number
+  periodIndexes: number[]
   subjectId: string
   subjectName: string
   existing?: DutyLeaveInfo
@@ -31,18 +31,15 @@ export function DutyLeaveSheet({
   const handleSave = async () => {
     setSaving(true)
     try {
-      await setDutyLeave({
-        semesterId,
-        date,
-        periodIndex,
-        subjectId,
-        dutyLeave: {
-          reason,
-          note: note.trim() || undefined,
-          proofBlob: proof ?? existing?.proofBlob,
-          proofName: proof?.name ?? existing?.proofName,
-        },
-      })
+      const dutyLeave: DutyLeaveInfo = {
+        reason,
+        note: note.trim() || undefined,
+        proofBlob: proof ?? existing?.proofBlob,
+        proofName: proof?.name ?? existing?.proofName,
+      }
+      await Promise.all(
+        periodIndexes.map((periodIndex) => setDutyLeave({ semesterId, date, periodIndex, subjectId, dutyLeave })),
+      )
       onClose()
     } finally {
       setSaving(false)

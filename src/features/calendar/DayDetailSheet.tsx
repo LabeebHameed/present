@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { BottomSheet } from '../../components/BottomSheet'
-import { PeriodRow } from '../today/PeriodRow'
+import { PeriodList } from '../today/PeriodList'
 import { expandSchedule } from '../../engine/schedule'
 import type { ClassRecord, DayOverride, Holiday, Semester, Subject, TimetableSlot } from '../../db/types'
 import { DayOverrideEditor } from './DayOverrideEditor'
@@ -45,19 +45,14 @@ export function DayDetailSheet({
         <p className="text-sm text-slate-400">No classes expected on this day.</p>
       )}
 
-      <div className="flex flex-col gap-2">
-        {periods.map((period) => (
-          <PeriodRow
-            key={period.periodIndex}
-            semesterId={semester.id}
-            date={date}
-            period={period}
-            subject={subjectById.get(period.subjectId)}
-            subjects={subjects}
-            record={recordsByPeriod.get(period.periodIndex)}
-          />
-        ))}
-      </div>
+      <PeriodList
+        semesterId={semester.id}
+        date={date}
+        periods={periods}
+        recordsByPeriod={recordsByPeriod}
+        subjectById={subjectById}
+        subjects={subjects}
+      />
 
       <button
         type="button"

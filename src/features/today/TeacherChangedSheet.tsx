@@ -7,7 +7,7 @@ import type { Subject, SubstitutionInfo } from '../../db/types'
 export function TeacherChangedSheet({
   semesterId,
   date,
-  periodIndex,
+  periodIndexes,
   subjectId,
   subjectName,
   subjects,
@@ -16,7 +16,7 @@ export function TeacherChangedSheet({
 }: {
   semesterId: string
   date: string
-  periodIndex: number
+  periodIndexes: number[]
   subjectId: string
   subjectName: string
   subjects: Subject[]
@@ -33,17 +33,15 @@ export function TeacherChangedSheet({
     if (!teacherName.trim()) return
     setSaving(true)
     try {
-      await setTeacherChanged({
-        semesterId,
-        date,
-        periodIndex,
-        subjectId,
-        status,
-        substitution: {
-          teacherName: teacherName.trim(),
-          actualSubjectId: differentSubject ? actualSubjectId : undefined,
-        },
-      })
+      const substitution: SubstitutionInfo = {
+        teacherName: teacherName.trim(),
+        actualSubjectId: differentSubject ? actualSubjectId : undefined,
+      }
+      await Promise.all(
+        periodIndexes.map((periodIndex) =>
+          setTeacherChanged({ semesterId, date, periodIndex, subjectId, status, substitution }),
+        ),
+      )
       onClose()
     } finally {
       setSaving(false)

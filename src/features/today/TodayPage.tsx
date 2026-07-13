@@ -8,7 +8,7 @@ import { todayISO } from '../../lib/date'
 import { markAllPresent } from '../../lib/recordActions'
 import { useNotificationSetting } from '../../lib/useNotificationSetting'
 import { useUnmarkedReminder } from '../../lib/useUnmarkedReminder'
-import { PeriodRow } from './PeriodRow'
+import { PeriodList } from './PeriodList'
 import { UnmarkedBanner } from './UnmarkedBanner'
 import { secondaryButton } from '../setup/inputStyles'
 
@@ -106,19 +106,14 @@ export function TodayPage() {
       {todaysPeriods.length === 0 ? (
         <p className="text-sm text-slate-400">No classes scheduled today.</p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {todaysPeriods.map((period) => (
-            <PeriodRow
-              key={period.periodIndex}
-              semesterId={semester.id}
-              date={today}
-              period={period}
-              subject={subjectById.get(period.subjectId)}
-              subjects={subjects}
-              record={recordsByPeriod.get(period.periodIndex)}
-            />
-          ))}
-        </div>
+        <PeriodList
+          semesterId={semester.id}
+          date={today}
+          periods={todaysPeriods}
+          recordsByPeriod={recordsByPeriod}
+          subjectById={subjectById}
+          subjects={subjects}
+        />
       )}
     </div>
   )

@@ -18,27 +18,50 @@ const STATUS_LABELS: Record<ClassRecord['status'], string> = {
 export function PeriodRow({
   semesterId,
   date,
-  period,
+  periods,
+  records,
   subject,
   subjects,
-  record,
+  onSplit,
+  onMerge,
 }: {
   semesterId: string
   date: string
-  period: ExpectedPeriod
+  /** 1+ consecutive same-subject periods this row represents (2+ = a merged double period) */
+  periods: ExpectedPeriod[]
+  /** aligned 1:1 with periods */
+  records: (ClassRecord | undefined)[]
   subject: Subject | undefined
   subjects: Subject[]
-  record: ClassRecord | undefined
+  /** shown when periods.length > 1: lets the user mark this exception day's periods independently */
+  onSplit?: () => void
+  /** shown on a lone period that could rejoin its neighbor (a previously forced split) */
+  onMerge?: () => void
 }) {
   const [sheet, setSheet] = useState<Sheet>(null)
   const [editingNote, setEditingNote] = useState(false)
-  const [noteDraft, setNoteDraft] = useState(record?.note ?? '')
+  const [noteDraft, setNoteDraft] = useState('')
   const subjectName = subject?.name ?? 'Unknown subject'
+  const periodIndexes = periods.map((p) => p.periodIndex)
+  const record = records.find((r) => r) // representative — merged rows only render when all agree
+  const firstPeriod = periods[0]
+  const lastPeriod = periods[periods.length - 1]
+  const isMerged = periods.length > 1
 
   const quickSet = (status: 'present' | 'absent' | 'cancelled') =>
-    setSimpleStatus({ semesterId, date, periodIndex: period.periodIndex, subjectId: period.subjectId, status })
+    Promise.all(
+      periodIndexes.map((periodIndex) =>
+        setSimpleStatus({ semesterId, date, periodIndex, subjectId: firstPeriod.subjectId, status }),
+      ),
+    )
 
   const isSubstituted = Boolean(record?.substitution)
+
+  const periodLabel = isMerged
+    ? `Periods ${firstPeriod.periodIndex}–${lastPeriod.periodIndex}`
+    : `Period ${firstPeriod.periodIndex}`
+  const timeLabel =
+    firstPeriod.startTime && lastPeriod.endTime ? `${firstPeriod.startTime} – ${lastPeriod.endTime}` : periodLabel
 
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
@@ -48,7 +71,7 @@ export function PeriodRow({
           <div>
             <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{subjectName}</div>
             <div className="text-xs text-slate-400">
-              {period.startTime && period.endTime ? `${period.startTime} – ${period.endTime}` : `Period ${period.periodIndex}`}
+              {timeLabel}
               {subject?.facultyName && ` · ${subject.facultyName}`}
             </div>
             {isSubstituted && record?.substitution && (
@@ -101,9 +124,9 @@ export function PeriodRow({
         </StatusButton>
       </div>
 
-      {record &&
-        (editingNote ? (
-          <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        {record ? (
+          editingNote ? (
             <textarea
               className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               rows={2}
@@ -111,30 +134,44 @@ export function PeriodRow({
               value={noteDraft}
               onChange={(e) => setNoteDraft(e.target.value)}
               onBlur={() => {
-                setNote(semesterId, date, period.periodIndex, noteDraft)
+                Promise.all(periodIndexes.map((periodIndex) => setNote(semesterId, date, periodIndex, noteDraft)))
                 setEditingNote(false)
               }}
             />
-          </div>
+          ) : (
+            <button
+              type="button"
+              className="text-left text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              onClick={() => {
+                setNoteDraft(record.note ?? '')
+                setEditingNote(true)
+              }}
+            >
+              {record.note ? `📝 ${record.note}` : '+ Add note'}
+            </button>
+          )
         ) : (
-          <button
-            type="button"
-            className="text-left text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-            onClick={() => {
-              setNoteDraft(record.note ?? '')
-              setEditingNote(true)
-            }}
-          >
-            {record.note ? `📝 ${record.note}` : '+ Add note'}
+          <span />
+        )}
+
+        {isMerged && onSplit && (
+          <button type="button" className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onClick={onSplit}>
+            Split periods
           </button>
-        ))}
+        )}
+        {!isMerged && onMerge && (
+          <button type="button" className="text-xs font-medium text-emerald-600 dark:text-emerald-400" onClick={onMerge}>
+            Merge back
+          </button>
+        )}
+      </div>
 
       {sheet === 'dutyLeave' && (
         <DutyLeaveSheet
           semesterId={semesterId}
           date={date}
-          periodIndex={period.periodIndex}
-          subjectId={period.subjectId}
+          periodIndexes={periodIndexes}
+          subjectId={firstPeriod.subjectId}
           subjectName={subjectName}
           existing={record?.dutyLeave}
           onClose={() => setSheet(null)}
@@ -144,8 +181,8 @@ export function PeriodRow({
         <TeacherChangedSheet
           semesterId={semesterId}
           date={date}
-          periodIndex={period.periodIndex}
-          subjectId={period.subjectId}
+          periodIndexes={periodIndexes}
+          subjectId={firstPeriod.subjectId}
           subjectName={subjectName}
           subjects={subjects}
           existing={record?.substitution}
