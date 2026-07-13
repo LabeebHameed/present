@@ -1,4 +1,8 @@
-import type { ClassRecord, DutyLeavePolicy, Subject } from '../db/types'
+import type { ClassRecord, DutyLeavePolicy, Subject, SubstitutionInfo } from '../db/types'
+
+export type StatsRecord = Pick<ClassRecord, 'subjectId' | 'status'> & {
+  substitution?: Pick<SubstitutionInfo, 'actualSubjectId'>
+}
 
 export interface SubjectStats {
   attended: number
@@ -53,9 +57,14 @@ function finalize(stats: SubjectStats): SubjectStats {
  * Aggregates recorded attendance into overall + per-subject stats. Only actual
  * ClassRecords are considered — unmarked expected periods are a UI concern
  * (see engine/schedule.ts), not part of the computed percentage.
+ *
+ * When a record carries substitution.actualSubjectId (a substitute taught a
+ * different subject than scheduled), it counts toward that subject instead of
+ * record.subjectId — the original scheduled subject is kept on the record only
+ * for period-join/history purposes.
  */
 export function computeStats(
-  records: Pick<ClassRecord, 'subjectId' | 'status'>[],
+  records: StatsRecord[],
   subjects: Pick<Subject, 'id'>[],
   policy: DutyLeavePolicy,
 ): AttendanceReport {
@@ -65,7 +74,8 @@ export function computeStats(
 
   for (const record of records) {
     applyRecord(overall, record, policy)
-    const subjectStats = bySubject[record.subjectId] ?? (bySubject[record.subjectId] = emptyStats())
+    const effectiveSubjectId = record.substitution?.actualSubjectId ?? record.subjectId
+    const subjectStats = bySubject[effectiveSubjectId] ?? (bySubject[effectiveSubjectId] = emptyStats())
     applyRecord(subjectStats, record, policy)
   }
 

@@ -1,4 +1,6 @@
+import { addMonths, format } from 'date-fns'
 import type { DayOfWeek, DutyLeavePolicy } from '../../db/types'
+import { todayISO } from '../../lib/date'
 
 export interface SubjectDraft {
   id: string
@@ -57,14 +59,8 @@ export const WEEKDAYS: { day: DayOfWeek; label: string; short: string }[] = [
   { day: 6, label: 'Saturday', short: 'Sat' },
 ]
 
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 function inFourMonths(): string {
-  const d = new Date()
-  d.setMonth(d.getMonth() + 4)
-  return d.toISOString().slice(0, 10)
+  return format(addMonths(new Date(), 4), 'yyyy-MM-dd')
 }
 
 export function createInitialWizardState(): WizardState {

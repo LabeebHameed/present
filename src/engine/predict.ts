@@ -1,10 +1,10 @@
-import type { ClassRecord, DayOverride, DutyLeavePolicy, Holiday, Semester, Subject, TimetableSlot } from '../db/types'
+import type { DayOverride, DutyLeavePolicy, Holiday, Semester, Subject, TimetableSlot } from '../db/types'
 import { expandSchedule } from './schedule'
 import { simulate, type HypotheticalEvent } from './simulate'
-import type { AttendanceReport } from './stats'
+import type { AttendanceReport, StatsRecord } from './stats'
 
 export interface PredictParams {
-  records: Pick<ClassRecord, 'subjectId' | 'status'>[]
+  records: StatsRecord[]
   subjects: Pick<Subject, 'id'>[]
   policy: DutyLeavePolicy
   semester: Pick<Semester, 'startDate' | 'endDate' | 'workingSaturdays'>

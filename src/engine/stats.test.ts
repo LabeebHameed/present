@@ -80,6 +80,22 @@ describe('computeStats', () => {
     expect(bySubject.COA).toMatchObject({ attended: 0, total: 0, percent: 0 })
     expect(bySubject.DBMS).toMatchObject({ attended: 0, total: 0, percent: 0 })
   })
+
+  it('tallies a substituted class under the actually-taught subject, not the scheduled one', () => {
+    const records = [
+      { subjectId: 'COA', status: 'present' as const, substitution: { actualSubjectId: 'DBMS' } },
+      { subjectId: 'COA', status: 'present' as const },
+    ]
+    const { bySubject } = computeStats(records, subjects, 'excluded')
+    expect(bySubject.DBMS).toMatchObject({ attended: 1, total: 1 })
+    expect(bySubject.COA).toMatchObject({ attended: 1, total: 1 })
+  })
+
+  it('overall stats are unaffected by substitution reassignment', () => {
+    const records = [{ subjectId: 'COA', status: 'present' as const, substitution: { actualSubjectId: 'DBMS' } }]
+    const { overall } = computeStats(records, subjects, 'excluded')
+    expect(overall).toMatchObject({ attended: 1, total: 1 })
+  })
 })
 
 describe('classesSafeToMiss', () => {

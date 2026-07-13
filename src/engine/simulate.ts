@@ -1,5 +1,5 @@
 import type { ClassRecord, DutyLeavePolicy, Subject } from '../db/types'
-import { computeStats, type AttendanceReport } from './stats'
+import { computeStats, type AttendanceReport, type StatsRecord } from './stats'
 
 export type HypotheticalEvent =
   | { type: 'attend'; subjectId: string; count?: number }
@@ -23,7 +23,7 @@ function eventsToSyntheticRecords(events: HypotheticalEvent[]): Pick<ClassRecord
  * Existing records are never mutated.
  */
 export function simulate(
-  records: Pick<ClassRecord, 'subjectId' | 'status'>[],
+  records: StatsRecord[],
   subjects: Pick<Subject, 'id'>[],
   policy: DutyLeavePolicy,
   events: HypotheticalEvent[],
