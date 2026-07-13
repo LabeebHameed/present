@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import { BottomNav } from './components/BottomNav'
 import { TodayPage } from './features/today/TodayPage'
 import { SetupPage } from './features/setup/SetupPage'
+import { ImportWorkspacePage } from './features/setup/ImportWorkspacePage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { AnalyticsPage } from './features/analytics/AnalyticsPage'
@@ -22,6 +23,7 @@ function App() {
         <Routes>
           <Route path="/" element={<TodayPage />} />
           <Route path="/setup" element={<SetupPage />} />
+          <Route path="/setup/import" element={<ImportWorkspacePage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/simulator" element={<SimulatorPage />} />
           <Route path="/calendar" element={<CalendarPage />} />

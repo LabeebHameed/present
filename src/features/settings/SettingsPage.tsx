@@ -10,6 +10,7 @@ import { secondaryButton } from '../setup/inputStyles'
 import { AttendanceRulesSection } from './AttendanceRulesSection'
 import { BackupSection } from './BackupSection'
 import { NotificationsSection } from './NotificationsSection'
+import { ShareWorkspaceSection } from './ShareWorkspaceSection'
 
 const themeOptions: { value: AppSettings['theme']; label: string }[] = [
   { value: 'light', label: 'Light' },
@@ -58,9 +59,14 @@ export function SettingsPage() {
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-slate-600 dark:text-slate-300">Semesters</h2>
-          <Link to="/setup" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            + New semester
-          </Link>
+          <div className="flex gap-3">
+            <Link to="/setup/import" className="text-xs font-semibold text-slate-400">
+              Import shared
+            </Link>
+            <Link to="/setup" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              + New semester
+            </Link>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -112,6 +118,7 @@ export function SettingsPage() {
       </section>
 
       {activeSemester && <AttendanceRulesSection semester={activeSemester} subjects={activeSubjects} />}
+      {activeSemester && <ShareWorkspaceSection semesterId={activeSemester.id} semesterName={activeSemester.name} />}
 
       <NotificationsSection />
       <BackupSection />

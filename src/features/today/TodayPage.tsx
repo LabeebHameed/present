@@ -36,12 +36,17 @@ export function TodayPage() {
         title="No active semester yet"
         description="Set up your subjects and weekly timetable to start tracking attendance."
         action={
-          <Link
-            to="/setup"
-            className="mt-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            Set up semester
-          </Link>
+          <div className="mt-2 flex flex-col items-center gap-2">
+            <Link
+              to="/setup"
+              className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+            >
+              Set up semester
+            </Link>
+            <Link to="/setup/import" className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+              Have a timetable someone shared with you? Import it →
+            </Link>
+          </div>
         }
       />
     )
