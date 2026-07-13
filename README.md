@@ -31,3 +31,7 @@ npm run test        # vitest (attendance engine)
 npm run test:e2e    # playwright end-to-end flows
 npm run build        # production build (includes typecheck)
 ```
+
+## Deployment
+
+Pushing to `main` builds and deploys to GitHub Pages via `.github/workflows/deploy.yml` (enable Pages → Source: GitHub Actions in the repo settings once). The production build is served from `/present/`; local dev and `vite preview` stay at the root.

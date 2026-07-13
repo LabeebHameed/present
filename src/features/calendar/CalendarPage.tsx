@@ -18,6 +18,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { expandSchedule } from '../../engine/schedule'
 import { DAY_DOT_CLASS, dayDotStatus } from './dayStatus'
 import { DayDetailSheet } from './DayDetailSheet'
+import { fieldInput } from '../setup/inputStyles'
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -31,6 +32,7 @@ export function CalendarPage() {
 
   const [monthAnchor, setMonthAnchor] = useState(() => new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
 
   const gridStart = startOfWeek(startOfMonth(monthAnchor))
   const gridEnd = endOfWeek(endOfMonth(monthAnchor))
@@ -57,6 +59,24 @@ export function CalendarPage() {
     return map
   }, [semester, slots, holidays, overrides, gridStart, gridEnd])
 
+  const subjectById = useMemo(() => new Map(subjects.map((s) => [s.id, s])), [subjects])
+
+  const searchResults = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    return records
+      .filter((r) => {
+        const subjectName = subjectById.get(r.subjectId)?.name.toLowerCase() ?? ''
+        const haystack = [subjectName, r.note, r.dutyLeave?.reason, r.dutyLeave?.note, r.substitution?.teacherName]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return haystack.includes(q)
+      })
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 30)
+  }, [query, records, subjectById])
+
   if (!semester) {
     return (
       <EmptyState
@@ -74,66 +94,103 @@ export function CalendarPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          className="rounded-full px-3 py-1 text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          onClick={() => setMonthAnchor((d) => subMonths(d, 1))}
-        >
-          ‹
-        </button>
-        <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          {format(monthAnchor, 'MMMM yyyy')}
-        </h1>
-        <button
-          type="button"
-          className="rounded-full px-3 py-1 text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          onClick={() => setMonthAnchor((d) => addMonths(d, 1))}
-        >
-          ›
-        </button>
-      </div>
+      <input
+        type="search"
+        className={fieldInput}
+        placeholder="Search attendance history…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-400">
-        {WEEKDAY_LABELS.map((label, i) => (
-          <div key={i}>{label}</div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {gridDays.map((day) => {
-          const dateStr = format(day, 'yyyy-MM-dd')
-          const dayRecords = recordsByDate.get(dateStr) ?? []
-          const status = dayDotStatus(dayRecords, (expectedByDate.get(dateStr) ?? 0) > 0, holidaySet.has(dateStr))
-          const inMonth = isSameMonth(day, monthAnchor)
-          const inSemesterRange = dateStr >= semester.startDate && dateStr <= semester.endDate
-
-          return (
+      {query.trim() ? (
+        <div className="flex flex-col gap-2">
+          {searchResults.length === 0 ? (
+            <p className="text-sm text-slate-400">No matches.</p>
+          ) : (
+            searchResults.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-left dark:border-slate-700"
+                onClick={() => setSelectedDate(r.date)}
+              >
+                <div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    {subjectById.get(r.subjectId)?.name ?? 'Unknown subject'}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {r.date} · {r.status}
+                    {r.note && ` · ${r.note}`}
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
             <button
-              key={dateStr}
               type="button"
-              disabled={!inSemesterRange}
-              onClick={() => setSelectedDate(dateStr)}
-              className={`flex flex-col items-center gap-1 rounded-xl py-2 text-sm ${
-                !inMonth ? 'text-slate-300 dark:text-slate-700' : 'text-slate-700 dark:text-slate-200'
-              } ${isToday(day) ? 'font-bold ring-1 ring-emerald-500' : ''} ${
-                inSemesterRange ? 'hover:bg-slate-50 dark:hover:bg-slate-800' : 'opacity-40'
-              }`}
+              className="rounded-full px-3 py-1 text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              onClick={() => setMonthAnchor((d) => subMonths(d, 1))}
             >
-              {format(day, 'd')}
-              <span className={`h-1.5 w-1.5 rounded-full ${status ? DAY_DOT_CLASS[status] : ''}`} />
+              ‹
             </button>
-          )
-        })}
-      </div>
+            <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {format(monthAnchor, 'MMMM yyyy')}
+            </h1>
+            <button
+              type="button"
+              className="rounded-full px-3 py-1 text-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              onClick={() => setMonthAnchor((d) => addMonths(d, 1))}
+            >
+              ›
+            </button>
+          </div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
-        <Legend color="bg-emerald-500" label="Present" />
-        <Legend color="bg-red-500" label="Absent" />
-        <Legend color="bg-amber-500" label="Duty leave" />
-        <Legend color="bg-sky-500" label="Cancelled" />
-        <Legend color="bg-slate-400" label="Holiday" />
-      </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-400">
+            {WEEKDAY_LABELS.map((label, i) => (
+              <div key={i}>{label}</div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {gridDays.map((day) => {
+              const dateStr = format(day, 'yyyy-MM-dd')
+              const dayRecords = recordsByDate.get(dateStr) ?? []
+              const status = dayDotStatus(dayRecords, (expectedByDate.get(dateStr) ?? 0) > 0, holidaySet.has(dateStr))
+              const inMonth = isSameMonth(day, monthAnchor)
+              const inSemesterRange = dateStr >= semester.startDate && dateStr <= semester.endDate
+
+              return (
+                <button
+                  key={dateStr}
+                  type="button"
+                  disabled={!inSemesterRange}
+                  onClick={() => setSelectedDate(dateStr)}
+                  className={`flex flex-col items-center gap-1 rounded-xl py-2 text-sm ${
+                    !inMonth ? 'text-slate-300 dark:text-slate-700' : 'text-slate-700 dark:text-slate-200'
+                  } ${isToday(day) ? 'font-bold ring-1 ring-emerald-500' : ''} ${
+                    inSemesterRange ? 'hover:bg-slate-50 dark:hover:bg-slate-800' : 'opacity-40'
+                  }`}
+                >
+                  {format(day, 'd')}
+                  <span className={`h-1.5 w-1.5 rounded-full ${status ? DAY_DOT_CLASS[status] : ''}`} />
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
+            <Legend color="bg-emerald-500" label="Present" />
+            <Legend color="bg-red-500" label="Absent" />
+            <Legend color="bg-amber-500" label="Duty leave" />
+            <Legend color="bg-sky-500" label="Cancelled" />
+            <Legend color="bg-slate-400" label="Holiday" />
+          </div>
+        </>
+      )}
 
       {selectedDate && (
         <DayDetailSheet

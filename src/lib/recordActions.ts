@@ -76,6 +76,13 @@ export async function removeRecord(semesterId: string, date: string, periodIndex
   await db.classRecords.delete(recordId(semesterId, date, periodIndex))
 }
 
+export async function setNote(semesterId: string, date: string, periodIndex: number, note: string): Promise<void> {
+  await db.classRecords.update(recordId(semesterId, date, periodIndex), {
+    note: note.trim() || undefined,
+    updatedAt: new Date().toISOString(),
+  })
+}
+
 export async function markAllPresent(
   semesterId: string,
   date: string,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ExpectedPeriod } from '../../engine/schedule'
 import type { ClassRecord, Subject } from '../../db/types'
-import { setSimpleStatus } from '../../lib/recordActions'
+import { setNote, setSimpleStatus } from '../../lib/recordActions'
 import { DutyLeaveSheet } from './DutyLeaveSheet'
 import { TeacherChangedSheet } from './TeacherChangedSheet'
 
@@ -31,6 +31,8 @@ export function PeriodRow({
   record: ClassRecord | undefined
 }) {
   const [sheet, setSheet] = useState<Sheet>(null)
+  const [editingNote, setEditingNote] = useState(false)
+  const [noteDraft, setNoteDraft] = useState(record?.note ?? '')
   const subjectName = subject?.name ?? 'Unknown subject'
 
   const quickSet = (status: 'present' | 'absent' | 'cancelled') =>
@@ -98,6 +100,34 @@ export function PeriodRow({
           🔄
         </StatusButton>
       </div>
+
+      {record &&
+        (editingNote ? (
+          <div className="flex flex-col gap-1">
+            <textarea
+              className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              rows={2}
+              autoFocus
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              onBlur={() => {
+                setNote(semesterId, date, period.periodIndex, noteDraft)
+                setEditingNote(false)
+              }}
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="text-left text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            onClick={() => {
+              setNoteDraft(record.note ?? '')
+              setEditingNote(true)
+            }}
+          >
+            {record.note ? `📝 ${record.note}` : '+ Add note'}
+          </button>
+        ))}
 
       {sheet === 'dutyLeave' && (
         <DutyLeaveSheet

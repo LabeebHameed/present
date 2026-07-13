@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ClassTrack</title>
+    <script>
+      // GitHub Pages has no server-side rewrites, so a deep link or hard
+      // refresh on a client-side route 404s. Standard workaround: stash the
+      // real path and redirect to the app shell, which restores it on load
+      // (see index.html). https://github.com/rafgraph/spa-github-pages
+      var basePath = '/present/'
+      var path = location.pathname.slice(basePath.length)
+      sessionStorage.setItem('spa-redirect-path', path + location.search + location.hash)
+      location.replace(basePath)
+    </script>
+  </head>
+  <body></body>
+</html>

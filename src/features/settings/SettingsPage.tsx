@@ -8,6 +8,8 @@ import type { AppSettings } from '../../db/types'
 import { deleteSemester, setActiveSemester } from '../../lib/semesterActions'
 import { secondaryButton } from '../setup/inputStyles'
 import { AttendanceRulesSection } from './AttendanceRulesSection'
+import { BackupSection } from './BackupSection'
+import { NotificationsSection } from './NotificationsSection'
 
 const themeOptions: { value: AppSettings['theme']; label: string }[] = [
   { value: 'light', label: 'Light' },
@@ -110,6 +112,9 @@ export function SettingsPage() {
       </section>
 
       {activeSemester && <AttendanceRulesSection semester={activeSemester} subjects={activeSubjects} />}
+
+      <NotificationsSection />
+      <BackupSection />
     </div>
   )
 }

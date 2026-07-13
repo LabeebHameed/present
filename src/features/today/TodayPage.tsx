@@ -6,7 +6,10 @@ import { expandSchedule } from '../../engine/schedule'
 import { classesNeededToReach, classesSafeToMiss, computeStats } from '../../engine/stats'
 import { todayISO } from '../../lib/date'
 import { markAllPresent } from '../../lib/recordActions'
+import { useNotificationSetting } from '../../lib/useNotificationSetting'
+import { useUnmarkedReminder } from '../../lib/useUnmarkedReminder'
 import { PeriodRow } from './PeriodRow'
+import { UnmarkedBanner } from './UnmarkedBanner'
 import { secondaryButton } from '../setup/inputStyles'
 
 export function TodayPage() {
@@ -16,6 +19,15 @@ export function TodayPage() {
   const holidays = useHolidays(semester?.id)
   const overrides = useDayOverrides(semester?.id)
   const records = useClassRecords(semester?.id)
+  const { enabled: notificationsEnabled } = useNotificationSetting()
+
+  const today = todayISO()
+  const todaysPeriods = semester ? expandSchedule({ semester, slots, holidays, overrides, from: today, to: today }) : []
+  const recordsByPeriod = new Map(records.filter((r) => r.date === today).map((r) => [r.periodIndex, r]))
+  const markedPeriods = new Set(recordsByPeriod.keys())
+  const unmarkedCount = todaysPeriods.filter((p) => !markedPeriods.has(p.periodIndex)).length
+
+  useUnmarkedReminder(notificationsEnabled, unmarkedCount, today, semester?.name ?? '')
 
   if (!semester) {
     return (
@@ -35,26 +47,11 @@ export function TodayPage() {
     )
   }
 
-  const today = todayISO()
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
   const { overall } = computeStats(records, subjects, semester.dutyLeavePolicy)
   const safeToMiss = classesSafeToMiss(overall.attended, overall.total, semester.targetPercent)
   const neededToAttend = classesNeededToReach(overall.attended, overall.total, semester.targetPercent)
-
-  const todaysPeriods = expandSchedule({
-    semester,
-    slots,
-    holidays,
-    overrides,
-    from: today,
-    to: today,
-  })
-
-  const recordsByPeriod = new Map(
-    records.filter((r) => r.date === today).map((r) => [r.periodIndex, r]),
-  )
-  const markedPeriods = new Set(recordsByPeriod.keys())
-  const allMarked = todaysPeriods.length > 0 && todaysPeriods.every((p) => markedPeriods.has(p.periodIndex))
+  const allMarked = todaysPeriods.length > 0 && unmarkedCount === 0
 
   return (
     <div className="flex flex-1 flex-col gap-5 p-4">
@@ -62,6 +59,8 @@ export function TodayPage() {
         <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{semester.name}</h1>
         <p className="text-sm text-slate-400">{today}</p>
       </div>
+
+      <UnmarkedBanner count={unmarkedCount} />
 
       <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
         <div className="flex items-baseline justify-between">
