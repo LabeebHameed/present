@@ -81,9 +81,14 @@ export function TodayPage() {
             </span>
           </div>
         </div>
-        <Link to="/analytics" className="mt-3 block text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-          View subject breakdown →
-        </Link>
+        <div className="mt-3 flex gap-4">
+          <Link to="/analytics" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            View subject breakdown →
+          </Link>
+          <Link to="/simulator" className="text-xs font-semibold text-violet-600 dark:text-violet-400">
+            What if...? →
+          </Link>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">

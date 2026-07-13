@@ -6,6 +6,7 @@ import { CalendarPage } from './features/calendar/CalendarPage'
 import { StatsPage } from './features/stats/StatsPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { AnalyticsPage } from './features/analytics/AnalyticsPage'
+import { SimulatorPage } from './features/simulator/SimulatorPage'
 import { useTheme } from './lib/useTheme'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="/" element={<TodayPage />} />
           <Route path="/setup" element={<SetupPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/simulator" element={<SimulatorPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
