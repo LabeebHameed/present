@@ -1,4 +1,12 @@
 import { db } from '../db/schema'
+import type { Semester } from '../db/types'
+
+export async function updateSemester(
+  id: string,
+  patch: Partial<Pick<Semester, 'targetPercent' | 'dutyLeavePolicy'>>,
+): Promise<void> {
+  await db.semesters.update(id, patch)
+}
 
 export async function setActiveSemester(id: string): Promise<void> {
   await db.transaction('rw', db.semesters, async () => {

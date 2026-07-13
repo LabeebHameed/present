@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTheme } from '../../lib/useTheme'
+import { useActiveSemester } from '../../lib/useActiveSemester'
+import { useSubjects } from '../../lib/queries'
 import { db } from '../../db/schema'
 import type { AppSettings } from '../../db/types'
 import { deleteSemester, setActiveSemester } from '../../lib/semesterActions'
 import { secondaryButton } from '../setup/inputStyles'
+import { AttendanceRulesSection } from './AttendanceRulesSection'
 
 const themeOptions: { value: AppSettings['theme']; label: string }[] = [
   { value: 'light', label: 'Light' },
@@ -14,6 +17,8 @@ const themeOptions: { value: AppSettings['theme']; label: string }[] = [
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const activeSemester = useActiveSemester()
+  const activeSubjects = useSubjects(activeSemester?.id)
   const semesters = useLiveQuery(
     async () => (await db.semesters.toArray()).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [],
@@ -102,11 +107,9 @@ export function SettingsPage() {
             </div>
           )}
         </div>
-
-        <p className="text-xs text-slate-400 dark:text-slate-500">
-          Per-subject target overrides and richer duty-leave controls are coming in a later build phase.
-        </p>
       </section>
+
+      {activeSemester && <AttendanceRulesSection semester={activeSemester} subjects={activeSubjects} />}
     </div>
   )
 }

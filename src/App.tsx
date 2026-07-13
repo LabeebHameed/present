@@ -5,6 +5,7 @@ import { SetupPage } from './features/setup/SetupPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { StatsPage } from './features/stats/StatsPage'
 import { SettingsPage } from './features/settings/SettingsPage'
+import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { useTheme } from './lib/useTheme'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Routes>
           <Route path="/" element={<TodayPage />} />
           <Route path="/setup" element={<SetupPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
