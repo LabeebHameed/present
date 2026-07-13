@@ -9,7 +9,7 @@ const tabs = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 inset-x-0 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 pb-[env(safe-area-inset-bottom)]">
+    <nav className="no-print fixed bottom-0 inset-x-0 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex max-w-lg">
         {tabs.map((tab) => (
           <NavLink
