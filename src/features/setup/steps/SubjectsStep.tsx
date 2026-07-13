@@ -28,8 +28,11 @@ export function SubjectsStep({ state, dispatch }: { state: WizardState; dispatch
 
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label className={fieldLabel}>Name</label>
+              <label className={fieldLabel} htmlFor={`subject-name-${subject.id}`}>
+                Name
+              </label>
               <input
+                id={`subject-name-${subject.id}`}
                 className={fieldInput}
                 placeholder="e.g. Database Systems"
                 value={subject.name}
@@ -37,8 +40,11 @@ export function SubjectsStep({ state, dispatch }: { state: WizardState; dispatch
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className={fieldLabel}>Code</label>
+              <label className={fieldLabel} htmlFor={`subject-code-${subject.id}`}>
+                Code
+              </label>
               <input
+                id={`subject-code-${subject.id}`}
                 className={fieldInput}
                 placeholder="e.g. DBMS"
                 value={subject.code}
@@ -48,8 +54,11 @@ export function SubjectsStep({ state, dispatch }: { state: WizardState; dispatch
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className={fieldLabel}>Faculty</label>
+            <label className={fieldLabel} htmlFor={`subject-faculty-${subject.id}`}>
+              Faculty
+            </label>
             <input
+              id={`subject-faculty-${subject.id}`}
               className={fieldInput}
               placeholder="e.g. Dr. Arun"
               value={subject.facultyName}
@@ -60,7 +69,7 @@ export function SubjectsStep({ state, dispatch }: { state: WizardState; dispatch
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className={fieldLabel}>Color</label>
+            <span className={fieldLabel}>Color</span>
             <div className="flex flex-wrap gap-2">
               {SUBJECT_COLORS.map((color) => (
                 <button

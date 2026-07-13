@@ -23,8 +23,11 @@ export function HolidaysStep({ state, dispatch }: { state: WizardState; dispatch
 
       <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
         <div className="flex flex-col gap-1">
-          <label className={fieldLabel}>Date</label>
+          <label className={fieldLabel} htmlFor="holiday-date">
+            Date
+          </label>
           <input
+            id="holiday-date"
             type="date"
             className={fieldInput}
             min={state.startDate}
@@ -34,8 +37,11 @@ export function HolidaysStep({ state, dispatch }: { state: WizardState; dispatch
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className={fieldLabel}>Name (optional)</label>
+          <label className={fieldLabel} htmlFor="holiday-name">
+            Name (optional)
+          </label>
           <input
+            id="holiday-name"
             className={fieldInput}
             placeholder="e.g. Onam"
             value={name}
