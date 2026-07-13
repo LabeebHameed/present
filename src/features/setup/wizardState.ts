@@ -10,12 +10,17 @@ export interface SubjectDraft {
   color: string
 }
 
-export interface SlotDraft {
-  id: string
-  dayOfWeek: DayOfWeek
+/** One weekly time range per period index, shared across every day (how real timetables work). */
+export interface PeriodTime {
   periodIndex: number
   startTime: string
   endTime: string
+}
+
+/** A single (day, period) cell assignment. Absence from this list means "unset". */
+export interface CellDraft {
+  dayOfWeek: DayOfWeek
+  periodIndex: number
   subjectId: string
 }
 
@@ -32,7 +37,9 @@ export interface WizardState {
   targetPercent: number
   dutyLeavePolicy: DutyLeavePolicy
   subjects: SubjectDraft[]
-  slots: SlotDraft[]
+  periodCount: number
+  periodTimes: PeriodTime[]
+  cells: CellDraft[]
   holidays: HolidayDraft[]
   workingSaturdays: Record<string, DayOfWeek>
 }
@@ -59,8 +66,14 @@ export const WEEKDAYS: { day: DayOfWeek; label: string; short: string }[] = [
   { day: 6, label: 'Saturday', short: 'Sat' },
 ]
 
+const DEFAULT_PERIOD_COUNT = 6
+
 function inFourMonths(): string {
   return format(addMonths(new Date(), 4), 'yyyy-MM-dd')
+}
+
+function defaultPeriodTimes(count: number): PeriodTime[] {
+  return Array.from({ length: count }, (_, i) => ({ periodIndex: i + 1, startTime: '', endTime: '' }))
 }
 
 export function createInitialWizardState(): WizardState {
@@ -71,7 +84,9 @@ export function createInitialWizardState(): WizardState {
     targetPercent: 75,
     dutyLeavePolicy: 'excluded',
     subjects: [],
-    slots: [],
+    periodCount: DEFAULT_PERIOD_COUNT,
+    periodTimes: defaultPeriodTimes(DEFAULT_PERIOD_COUNT),
+    cells: [],
     holidays: [],
     workingSaturdays: {},
   }
@@ -95,12 +110,15 @@ export type WizardAction =
   | { type: 'ADD_SUBJECT' }
   | { type: 'UPDATE_SUBJECT'; id: string; patch: Partial<Omit<SubjectDraft, 'id'>> }
   | { type: 'REMOVE_SUBJECT'; id: string }
-  | { type: 'UPSERT_SLOT'; slot: SlotDraft }
-  | { type: 'REMOVE_SLOT'; id: string }
+  | { type: 'SET_PERIOD_COUNT'; count: number }
+  | { type: 'SET_PERIOD_TIME'; periodIndex: number; startTime: string; endTime: string }
+  | { type: 'SET_CELL'; dayOfWeek: DayOfWeek; periodIndex: number; subjectId: string | null }
+  | { type: 'SPLIT_CELL_GROUP'; dayOfWeek: DayOfWeek; fromPeriodIndex: number; toPeriodIndex: number }
   | { type: 'COPY_DAY'; from: DayOfWeek; to: DayOfWeek }
   | { type: 'ADD_HOLIDAY'; holiday: HolidayDraft }
   | { type: 'REMOVE_HOLIDAY'; id: string }
   | { type: 'SET_WORKING_SATURDAY'; date: string; mirrorsDay: DayOfWeek | null }
+  | { type: 'LOAD_DRAFT'; state: WizardState }
 
 export function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
@@ -123,22 +141,52 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       return {
         ...state,
         subjects: state.subjects.filter((s) => s.id !== action.id),
-        slots: state.slots.filter((slot) => slot.subjectId !== action.id),
+        cells: state.cells.filter((c) => c.subjectId !== action.id),
       }
 
-    case 'UPSERT_SLOT': {
-      const withoutOld = state.slots.filter((s) => s.id !== action.slot.id)
-      return { ...state, slots: [...withoutOld, action.slot] }
+    case 'SET_PERIOD_COUNT': {
+      const count = Math.max(1, Math.min(12, action.count))
+      const existingByIndex = new Map(state.periodTimes.map((p) => [p.periodIndex, p]))
+      const periodTimes = Array.from({ length: count }, (_, i) => {
+        const periodIndex = i + 1
+        return existingByIndex.get(periodIndex) ?? { periodIndex, startTime: '', endTime: '' }
+      })
+      return { ...state, periodCount: count, periodTimes, cells: state.cells.filter((c) => c.periodIndex <= count) }
     }
 
-    case 'REMOVE_SLOT':
-      return { ...state, slots: state.slots.filter((s) => s.id !== action.id) }
+    case 'SET_PERIOD_TIME':
+      return {
+        ...state,
+        periodTimes: state.periodTimes.map((p) =>
+          p.periodIndex === action.periodIndex ? { ...p, startTime: action.startTime, endTime: action.endTime } : p,
+        ),
+      }
+
+    case 'SET_CELL': {
+      const withoutCell = state.cells.filter(
+        (c) => !(c.dayOfWeek === action.dayOfWeek && c.periodIndex === action.periodIndex),
+      )
+      if (action.subjectId === null) return { ...state, cells: withoutCell }
+      return {
+        ...state,
+        cells: [...withoutCell, { dayOfWeek: action.dayOfWeek, periodIndex: action.periodIndex, subjectId: action.subjectId }],
+      }
+    }
+
+    case 'SPLIT_CELL_GROUP': {
+      // Clears every period in the merged group except the first, so each becomes individually editable again.
+      const cells = state.cells.filter(
+        (c) =>
+          !(c.dayOfWeek === action.dayOfWeek && c.periodIndex > action.fromPeriodIndex && c.periodIndex <= action.toPeriodIndex),
+      )
+      return { ...state, cells }
+    }
 
     case 'COPY_DAY': {
-      const sourceSlots = state.slots.filter((s) => s.dayOfWeek === action.from)
-      const targetOthers = state.slots.filter((s) => s.dayOfWeek !== action.to)
-      const copied = sourceSlots.map((s) => ({ ...s, id: crypto.randomUUID(), dayOfWeek: action.to }))
-      return { ...state, slots: [...targetOthers, ...copied] }
+      const sourceCells = state.cells.filter((c) => c.dayOfWeek === action.from)
+      const targetOthers = state.cells.filter((c) => c.dayOfWeek !== action.to)
+      const copied = sourceCells.map((c) => ({ ...c, dayOfWeek: action.to }))
+      return { ...state, cells: [...targetOthers, ...copied] }
     }
 
     case 'ADD_HOLIDAY':
@@ -156,6 +204,9 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       }
       return { ...state, workingSaturdays }
     }
+
+    case 'LOAD_DRAFT':
+      return action.state
 
     default:
       return state

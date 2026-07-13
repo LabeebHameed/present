@@ -3,6 +3,7 @@ import type { WizardState } from './wizardState'
 
 export async function commitWizard(state: WizardState): Promise<string> {
   const semesterId = crypto.randomUUID()
+  const timeByPeriod = new Map(state.periodTimes.map((p) => [p.periodIndex, p]))
 
   await db.transaction('rw', db.semesters, db.subjects, db.timetableSlots, db.holidays, async () => {
     const activeIds = await db.semesters.filter((s) => s.isActive).primaryKeys()
@@ -32,15 +33,18 @@ export async function commitWizard(state: WizardState): Promise<string> {
     )
 
     await db.timetableSlots.bulkAdd(
-      state.slots.map((slot) => ({
-        id: slot.id,
-        semesterId,
-        dayOfWeek: slot.dayOfWeek,
-        periodIndex: slot.periodIndex,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        subjectId: slot.subjectId,
-      })),
+      state.cells.map((cell) => {
+        const time = timeByPeriod.get(cell.periodIndex)
+        return {
+          id: crypto.randomUUID(),
+          semesterId,
+          dayOfWeek: cell.dayOfWeek,
+          periodIndex: cell.periodIndex,
+          startTime: time?.startTime ?? '',
+          endTime: time?.endTime ?? '',
+          subjectId: cell.subjectId,
+        }
+      }),
     )
 
     await db.holidays.bulkAdd(

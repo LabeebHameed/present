@@ -20,7 +20,7 @@ export function ReviewStep({ state }: { state: WizardState }) {
         </div>
         <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900">
           <dt className="text-xs text-slate-400">Weekly periods</dt>
-          <dd className="text-lg font-semibold text-slate-800 dark:text-slate-100">{state.slots.length}</dd>
+          <dd className="text-lg font-semibold text-slate-800 dark:text-slate-100">{state.cells.length}</dd>
         </div>
         <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900">
           <dt className="text-xs text-slate-400">Holidays</dt>

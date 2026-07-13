@@ -2,30 +2,36 @@ import { useState, type Dispatch } from 'react'
 import type { DayOfWeek } from '../../../db/types'
 import type { WizardAction, WizardState } from '../wizardState'
 import { WEEKDAYS } from '../wizardState'
-import { fieldInput, secondaryButton } from '../inputStyles'
+import { secondaryButton } from '../inputStyles'
+import { TimetableCellSheet } from './TimetableCellSheet'
+
+interface CellGroup {
+  start: number
+  end: number
+  subjectId: string | null
+}
+
+function computeRowGroups(cellsForDay: WizardState['cells'], periodCount: number): CellGroup[] {
+  const subjectByPeriod = new Map(cellsForDay.map((c) => [c.periodIndex, c.subjectId]))
+  const groups: CellGroup[] = []
+  let i = 1
+  while (i <= periodCount) {
+    const subjectId = subjectByPeriod.get(i) ?? null
+    if (subjectId === null) {
+      groups.push({ start: i, end: i, subjectId: null })
+      i++
+      continue
+    }
+    let j = i
+    while (j + 1 <= periodCount && subjectByPeriod.get(j + 1) === subjectId) j++
+    groups.push({ start: i, end: j, subjectId })
+    i = j + 1
+  }
+  return groups
+}
 
 export function TimetableStep({ state, dispatch }: { state: WizardState; dispatch: Dispatch<WizardAction> }) {
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(1)
-  const [copyFrom, setCopyFrom] = useState<DayOfWeek | ''>('')
-
-  const daySlots = state.slots
-    .filter((s) => s.dayOfWeek === selectedDay)
-    .sort((a, b) => a.periodIndex - b.periodIndex)
-
-  const addPeriod = () => {
-    const nextIndex = daySlots.length ? Math.max(...daySlots.map((s) => s.periodIndex)) + 1 : 1
-    dispatch({
-      type: 'UPSERT_SLOT',
-      slot: {
-        id: crypto.randomUUID(),
-        dayOfWeek: selectedDay,
-        periodIndex: nextIndex,
-        startTime: '',
-        endTime: '',
-        subjectId: state.subjects[0]?.id ?? '',
-      },
-    })
-  }
+  const [selectedCell, setSelectedCell] = useState<{ dayOfWeek: DayOfWeek; start: number; end: number } | null>(null)
 
   if (state.subjects.length === 0) {
     return (
@@ -35,100 +41,128 @@ export function TimetableStep({ state, dispatch }: { state: WizardState; dispatc
     )
   }
 
+  const subjectById = new Map(state.subjects.map((s) => [s.id, s]))
+  const cellsByDay = new Map<DayOfWeek, WizardState['cells']>()
+  for (const cell of state.cells) {
+    const list = cellsByDay.get(cell.dayOfWeek) ?? []
+    list.push(cell)
+    cellsByDay.set(cell.dayOfWeek, list)
+  }
+
+  const copyMondayToAll = () => {
+    for (const day of WEEKDAYS.filter((w) => w.day !== 1)) {
+      dispatch({ type: 'COPY_DAY', from: 1, to: day.day })
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-1 overflow-x-auto pb-1">
-        {WEEKDAYS.map(({ day, short }) => (
-          <button
-            key={day}
-            type="button"
-            onClick={() => setSelectedDay(day)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${
-              selectedDay === day
-                ? 'bg-emerald-600 text-white'
-                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-            }`}
-          >
-            {short}
-          </button>
-        ))}
-      </div>
-
       <div className="flex items-center gap-2">
-        <select
-          className={fieldInput}
-          value={copyFrom}
-          onChange={(e) => setCopyFrom(e.target.value ? (Number(e.target.value) as DayOfWeek) : '')}
-        >
-          <option value="">Copy periods from...</option>
-          {WEEKDAYS.filter((w) => w.day !== selectedDay).map((w) => (
-            <option key={w.day} value={w.day}>
-              {w.label}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className={secondaryButton}
-          disabled={copyFrom === ''}
-          onClick={() => {
-            if (copyFrom === '') return
-            dispatch({ type: 'COPY_DAY', from: copyFrom, to: selectedDay })
-            setCopyFrom('')
-          }}
-        >
-          Copy
+        <label htmlFor="period-count" className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          Periods per day
+        </label>
+        <input
+          id="period-count"
+          type="number"
+          min={1}
+          max={12}
+          className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+          value={state.periodCount}
+          onChange={(e) => dispatch({ type: 'SET_PERIOD_COUNT', count: Number(e.target.value) || 1 })}
+        />
+        <button type="button" className={`${secondaryButton} ml-auto text-xs`} onClick={copyMondayToAll}>
+          Copy Monday to all days
         </button>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {daySlots.map((slot) => (
-          <div key={slot.id} className="flex flex-col gap-2 rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
-            <div className="flex items-center gap-2">
-              <span className="w-6 shrink-0 text-center text-xs font-semibold text-slate-400">
-                P{slot.periodIndex}
-              </span>
-              <select
-                className={fieldInput}
-                value={slot.subjectId}
-                onChange={(e) => dispatch({ type: 'UPSERT_SLOT', slot: { ...slot, subjectId: e.target.value } })}
-              >
-                {state.subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name || subject.code || 'Untitled subject'}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="shrink-0 text-xs font-medium text-red-500"
-                onClick={() => dispatch({ type: 'REMOVE_SLOT', id: slot.id })}
-              >
-                Remove
-              </button>
-            </div>
-            <div className="flex items-center gap-2 pl-8">
-              <input
-                type="time"
-                className={fieldInput}
-                value={slot.startTime}
-                onChange={(e) => dispatch({ type: 'UPSERT_SLOT', slot: { ...slot, startTime: e.target.value } })}
-              />
-              <span className="text-slate-400">–</span>
-              <input
-                type="time"
-                className={fieldInput}
-                value={slot.endTime}
-                onChange={(e) => dispatch({ type: 'UPSERT_SLOT', slot: { ...slot, endTime: e.target.value } })}
-              />
-            </div>
-          </div>
-        ))}
+      <p className="text-xs text-slate-400">
+        Tap a cell to assign a subject. Setting the same subject on two periods in a row merges them into one block —
+        tap the block to split it apart again.
+      </p>
+
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+        <table className="border-collapse text-sm">
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-10 w-14 border-b border-r border-slate-200 bg-white p-1.5 text-xs font-medium text-slate-400 dark:border-slate-700 dark:bg-slate-900">
+                Day
+              </th>
+              {state.periodTimes.map((p) => (
+                <th
+                  key={p.periodIndex}
+                  className="border-b border-slate-200 bg-slate-50 p-1.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  P{p.periodIndex}
+                </th>
+              ))}
+            </tr>
+            <tr>
+              <th className="sticky left-0 z-10 border-b border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900" />
+              {state.periodTimes.map((p) => (
+                <th key={p.periodIndex} className="border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
+                  <div className="flex flex-col gap-0.5">
+                    <input
+                      type="time"
+                      value={p.startTime}
+                      onChange={(e) => dispatch({ type: 'SET_PERIOD_TIME', periodIndex: p.periodIndex, startTime: e.target.value, endTime: p.endTime })}
+                      className="w-[72px] rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] dark:border-slate-600 dark:bg-slate-900"
+                    />
+                    <input
+                      type="time"
+                      value={p.endTime}
+                      onChange={(e) => dispatch({ type: 'SET_PERIOD_TIME', periodIndex: p.periodIndex, startTime: p.startTime, endTime: e.target.value })}
+                      className="w-[72px] rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] dark:border-slate-600 dark:bg-slate-900"
+                    />
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {WEEKDAYS.map((day) => {
+              const groups = computeRowGroups(cellsByDay.get(day.day) ?? [], state.periodCount)
+              return (
+                <tr key={day.day}>
+                  <td className="sticky left-0 z-10 border-r border-b border-slate-200 bg-white p-1.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    {day.short}
+                  </td>
+                  {groups.map((group) => {
+                    const subject = group.subjectId ? subjectById.get(group.subjectId) : undefined
+                    return (
+                      <td
+                        key={group.start}
+                        colSpan={group.end - group.start + 1}
+                        onClick={() => setSelectedCell({ dayOfWeek: day.day, start: group.start, end: group.end })}
+                        className={`h-12 min-w-[56px] cursor-pointer border-b border-slate-100 p-1 text-center align-middle text-xs dark:border-slate-800 ${
+                          subject ? '' : 'text-slate-300 dark:text-slate-700'
+                        }`}
+                        style={subject ? { backgroundColor: `${subject.color}22`, color: subject.color } : undefined}
+                      >
+                        {subject ? subject.code || subject.name : '+'}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
 
-      <button type="button" className={secondaryButton} onClick={addPeriod}>
-        + Add period
-      </button>
+      {selectedCell && (
+        <TimetableCellSheet
+          dayOfWeek={selectedCell.dayOfWeek}
+          periodStart={selectedCell.start}
+          periodEnd={selectedCell.end}
+          currentSubjectId={
+            state.cells.find((c) => c.dayOfWeek === selectedCell.dayOfWeek && c.periodIndex === selectedCell.start)
+              ?.subjectId ?? null
+          }
+          subjects={state.subjects}
+          dispatch={dispatch}
+          onClose={() => setSelectedCell(null)}
+        />
+      )}
     </div>
   )
 }
